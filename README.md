@@ -6,35 +6,35 @@ https://developers.giphy.com/explorer/ -> GIPHY API
 
 # Terminal commands needed (MacOS):
 
-- Terminal One:
-ollama pull llama3
+# Terminal One:
+- ollama pull llama3
 
-- Terminal Two:
-ollama serve
+# Terminal Two:
+- ollama serve
 
-- Terminal Three:
-n8n 
-o
+# Terminal Three:
+- n8n 
+- o
  
-- Installing Ollama, Homebrew and n8n:
-brew install ollama -> Ollama
-brew install n8n -> n8n
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" -> Homebrew
+# Installing Ollama, Homebrew and n8n:
+- brew install ollama -> Ollama
+- brew install n8n -> n8n
+- /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" -> Homebrew
 
 
 # Cmd Prompt commands needed (Windows):
-- Powershell one:
-ollama pull llama3
+# Powershell one:
+- ollama pull llama3
 
-- Powershell two:
-ollama serve
+# Powershell two:
+- ollama serve
 
-- Powershell three:
-n8n 
-o 
-(or open manually at: http://localhost:5678 )
+# Powershell three:
+- n8n 
+- o 
+- (or open manually at: http://localhost:5678 )
 
 
-Installing Ollama and n8n:
-Ollama: https://ollama.com/download
-n8n:npm install -g n8n
+# Installing Ollama and n8n:
+- Ollama: https://ollama.com/download
+- n8n:npm install -g n8n
