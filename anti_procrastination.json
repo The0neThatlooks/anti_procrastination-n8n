@@ -1,0 +1,492 @@
+{
+  "name": "anti_procrastination",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Anti Procrastination List:",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Task Name:",
+              "placeholder": "Task name goes here.",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Deadline:",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email:",
+              "fieldType": "email",
+              "placeholder": "Your Email goes here. ",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        248
+      ],
+      "id": "3b3296f7-c49c-41b7-b2ef-de0556d2ee16",
+      "name": "On form submission",
+      "webhookId": "22391161-6a5b-4d65-9f7b-7ab74f790b56"
+    },
+    {
+      "parameters": {
+        "unit": "hours"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        344
+      ],
+      "id": "eb221808-6c0a-44c8-8217-dbb650302456",
+      "name": "Wait",
+      "webhookId": "4d888f59-4392-4302-af91-86755c043aec"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"llama3\",\n  \"prompt\": \"Generate an anti procrastination message. Keep it short and a little sarcastic. Don't be corny.\",\n  \"stream\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        344
+      ],
+      "id": "b6228048-c14c-4c33-aef0-3d7b59dfa86f",
+      "name": "Ollama Start"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=youremail@example.com",
+        "toEmail": "={{ $('On form submission').item.json['Email:'] }}",
+        "subject": "=Anti Procrastination message for: {{ $('On form submission').first().json['Task Name:'] }}",
+        "html": "=<p style=\"font-family: Arial, Helvetica, sans-serif; font-weight: 100; font-size: 18px;\"> \n<br>\n<strong>Task:</strong> {{ $('On form submission').item.json['Task Name:'] }} \n<br><br>\n<img src=\"{{ $json.data.images.original.url }}\" alt=\"\" style=\"border-radius: 10px; max-width: 100%; height: auto; object-fit: contain;\">\n<br><br>\n  {{\n    $('Ollama Start').first().json.response.replace(/^\"(.*)\"$/, '$1') + \n    \"<br><br>Time left until deadline ends: \" + \n    Math.ceil(\n      (new Date($('On form submission').item.json['Deadline:']).getTime() - \n       new Date($('On form submission').item.json.submittedAt).getTime()) / \n      1000 / 60 / 60\n    ) + \" hours\"\n  }}\n</p>\n\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1856,
+        176
+      ],
+      "id": "075927f8-ac1f-496a-98f6-426095317b2f",
+      "name": "Procrastination Email",
+      "webhookId": "709a6b19-d2a8-4c6d-9241-4b3e01e09982",
+      "credentials": {
+        "smtp": {
+          "id": "EXmTFbIwYsf6VaXl",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3\",\n  \"prompt\": \"{{ $json.prompt }}\",\n  \"stream\": false\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1184,
+        -16
+      ],
+      "id": "01dd3054-3052-424e-b58b-45f85903f642",
+      "name": "Ollama Finished"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=youremail@example.com",
+        "toEmail": "={{ $('On form submission').item.json['Email:'] }}",
+        "subject": "=Congratulations for completing task: {{ $('On form submission').item.json['Task Name:'] }}!",
+        "html": "=<p style=\"font-family: Arial, Helvetica, sans-serif; font-weight: 100; font-size: 18px;\">\n  <strong>Finished task: </strong>{{ $('On form submission').item.json['Task Name:'] }}!<br><br>\n\n  <img src=\"{{ $('Finished Code').item.json.image }}\" alt=\"Task Image\" style=\"max-width: 100%; height: auto; margin-bottom: 10px; border-radius: 10px;\" /><br><br>\n\n  {{ $('Ollama Finished').first().json.response.replace(/^\"(.*)\"$/, '$1') }}<br><br>\n\n  Time you had left: {{\n    (() => {\n      const deadline = new Date($('On form submission').item.json['Deadline:']);\n      const submitted = new Date($('On form submission').item.json.submittedAt);\n      const diffMs = deadline - submitted;\n\n      const minutes = Math.floor(diffMs / 60000);\n      const weeks = Math.floor(minutes / (7 * 24 * 60));\n      const days = Math.floor((minutes % (7 * 24 * 60)) / (24 * 60));\n      const hours = Math.floor((minutes % (24 * 60)) / 60);\n      const mins = minutes % 60;\n\n      const parts = [];\n      if (weeks > 0) parts.push(`${weeks} week${weeks !== 1 ? 's' : ''}`);\n      if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);\n      parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);\n      parts.push(`${mins} minute${mins !== 1 ? 's' : ''}`);\n\n      return parts.join(', ');\n    })()\n  }}\n</p>\n",
+        "options": {
+          "appendAttribution": "={{ false }}"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1408,
+        -16
+      ],
+      "id": "cdac0c1c-9cf5-471c-8cef-e42ee4e31a36",
+      "name": "Finished Email",
+      "webhookId": "709a6b19-d2a8-4c6d-9241-4b3e01e09982",
+      "credentials": {
+        "smtp": {
+          "id": "EXmTFbIwYsf6VaXl",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "10db3ab9-70d3-4e06-9f24-178b22d7cc3d",
+              "name": "Are you finished with your task?",
+              "value": "true",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        512,
+        248
+      ],
+      "id": "352d01b8-354b-4e13-ae97-8275a0e09f9d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "https://api.giphy.com/v1/gifs/random",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_key",
+              "value": "YNaG7c6JK9mb9UkU8E8oIvJ9HmComT63"
+            },
+            {
+              "name": "tag",
+              "value": "bored"
+            },
+            {
+              "name": "rating",
+              "value": "pg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1408,
+        176
+      ],
+      "id": "46ea6474-ccab-4977-bced-d41bff9da8d8",
+      "name": "GIPHY API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get Giphy API response data\nconst giphyData = items[0].json.data;\n\n// Extract the original GIF URL safely\nconst gifUrl = giphyData?.images?.original?.url;\n\nif (!gifUrl) {\n  throw new Error(\"GIF URL not found in Giphy response\");\n}\n\n// Return the same data, but add a new field 'gifUrl' with the extracted URL\nreturn [{ json: { ...items[0].json, gifUrl } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        176
+      ],
+      "id": "1f1e620d-fe9e-43ee-afc6-e16281009aaf",
+      "name": "GIPHY Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  const submittedAt = new Date(item.json.submittedAt);\n  const finishedAt = new Date();\n\n  const deadline = new Date(item.json[\"Deadline:\"]);\n  deadline.setHours(23, 59, 59, 999);\n\n  // Calculate raw hours taken\n  const hoursTakenRaw = (finishedAt - submittedAt) / (1000 * 60 * 60);\n\n  // Calculate milliseconds remaining\n  const msRemaining = deadline - finishedAt;\n\n  // Format time left in readable format\n  function formatTimeLeft(ms) {\n    if (ms <= 0) return \"Deadline passed\";\n\n    const totalMinutes = Math.floor(ms / 60000);\n    const weeks = Math.floor(totalMinutes / (60 * 24 * 7));\n    const days = Math.floor((totalMinutes % (60 * 24 * 7)) / (60 * 24));\n    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);\n    const minutes = totalMinutes % 60;\n\n    const parts = [];\n    if (weeks > 0) parts.push(`${weeks} week${weeks !== 1 ? 's' : ''}`);\n    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);\n    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);\n    if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);\n\n    return parts.join(', ');\n  }\n\n  // Format time taken string\n  let timeTakenStr = '';\n  if (hoursTakenRaw < 1) {\n    let minutes = Math.round(hoursTakenRaw * 60);\n    if (minutes === 0) minutes = 1;\n    timeTakenStr = `${minutes} minute${minutes === 1 ? '' : 's'}`;\n  } else {\n    const hoursRounded = Math.round(hoursTakenRaw * 10) / 10;\n    timeTakenStr = `${hoursRounded} hour${hoursRounded === 1 ? '' : 's'}`;\n  }\n\n  // Decide medal and image\n  const hoursRemaining = msRemaining / (1000 * 60 * 60);\n  let medal = '', image = '';\n\n  if (hoursRemaining > 12) {\n    medal = 'gold';\n    image = 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaHM1MXI4N2YyNjNxb2VvZ21pZGFhb3dtcXY5OGEzamxnM25xbzhkZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5mr7XqhweDJLAHhruc/giphy.gif';\n  } else if (hoursRemaining > 1) {\n    medal = 'silver';\n    image = 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHNuMW5udjU2dDVraWFtYWJqaGM3bzNzMmlvZ3l4YjV5MTdqNzVhYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/40iCJ4IefYRVMpsOKf/giphy.gif';\n  } else {\n    medal = 'bronze';\n    image = 'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNDJudnFlaTRhZ2wwcmpqbzd0Mmx1a3cwandmZ2V3M2ZqbDI2Z3JwMyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7y0lYnRTEaRO6H9djr/giphy.gif';\n  }\n\n  // Store everything\n  item.json.medal = medal;\n  item.json.image = image;\n  item.json.timeTaken = hoursTakenRaw;\n  item.json.timeLeft = formatTimeLeft(msRemaining);\n\n  // Generate prompt for Ollama\n  item.json.prompt = (() => {\n    const timeLeft = item.json.timeLeft;\n    if (medal === 'gold') {\n      return `Generate a short, confident message congratulating the user for completing the task ahead of schedule.`;\n    } else if (medal === 'silver') {\n      return `Generate a short and encouraging message for completing the task ahead fo schedule.`;\n    } else {\n      return `Generate a short, sarcastically supportive message for barely finishing the task in time.`;\n    }\n  })();\n}\n\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -16
+      ],
+      "id": "be915030-47a6-4187-bd4b-a0babf90a7f8",
+      "name": "Finished Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c6bc53e9-82ce-4eaf-839e-0d95f011c665",
+              "leftValue": "={{ $json['Are you finished with your task?'] }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "e24e7ff2-f5a0-4dcf-81c9-8d0d35d12b6a",
+              "leftValue": "={{ $json['Are you finished with your task?'] }}",
+              "rightValue": "f",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        248
+      ],
+      "id": "530bd61c-b457-4f9d-b8d2-19b63620f402",
+      "name": "Finished task?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d32b4efb-2912-40bf-a6d1-e9f59d1a7dc5",
+              "leftValue": "={{$now}}",
+              "rightValue": "={{ $('On form submission').item.json['Deadline:'] }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "beforeOrEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "={{ true }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        272
+      ],
+      "id": "8a0dcc14-43ca-471b-9228-54914b6605ed",
+      "name": "Deadline ended?"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Ollama is not working. "
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        368
+      ],
+      "id": "110d1165-3329-44f2-a220-1e888a47e188",
+      "name": "Throw Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Ollama Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Start": {
+      "main": [
+        [
+          {
+            "node": "Deadline ended?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procrastination Email": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Finished": {
+      "main": [
+        [
+          {
+            "node": "Finished Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Finished task?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GIPHY API": {
+      "main": [
+        [
+          {
+            "node": "GIPHY Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GIPHY Code": {
+      "main": [
+        [
+          {
+            "node": "Procrastination Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finished Code": {
+      "main": [
+        [
+          {
+            "node": "Ollama Finished",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finished task?": {
+      "main": [
+        [
+          {
+            "node": "Finished Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deadline ended?": {
+      "main": [
+        [
+          {
+            "node": "GIPHY API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Ollama working?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Throw Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1e8ee5d1-48b6-4d71-a06f-86e9bc8943a2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91933495da18e9a3500e0f2f3c1d86e7b83d61c0aad4411ad817822aab6785c7"
+  },
+  "id": "NDfqFHC9VbGlO1yr",
+  "tags": []
+}
